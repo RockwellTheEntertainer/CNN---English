@@ -2,10 +2,6 @@
 
 At the beginning of 2022, a simple CNN convolutional neural network training demo was written. The current version is only used to verify the forward and back propagation of the neural network and deepen personal understanding. It does not involve high-performance optimization and model deployment for the time being. It currently only writes a simple implementation on the CPU. There are plans to launch a CPU optimized version and a GPU version (based on CUDA) in the future.
 
-Zhihu Blog: https://zhuanlan.zhihu.com/p/468100301
-
-![image-20230208205425138](./imgs/image-20230208205425138.png)
-
 Some basic layers are implemented
 
 - Conv2d Convolutional layer, padding not supported 

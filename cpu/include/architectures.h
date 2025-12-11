@@ -12,13 +12,13 @@
 namespace architectures {
     using namespace pipeline;
 
-    // 随机初始化用的, C++ 这个生成的数字过大, softmax 之前的都好几百, 直接爆了, 坑爹
+    // Random initialization, C++, the generated number is too large, hundreds before softmax, it is directly exploded, it is a rip off
     extern data_type random_times;
 
-    // 全局变量, 是否要 backward, 访问速度上要慢一些
+    // Global variables, whether to backward, and access speed should be slower
     extern bool no_grad;
 
-    // 在作用域内关闭梯度相关计算
+    // Turn off gradient-dependent calculations within scope
     class WithoutGrad final {
     public:
         explicit WithoutGrad() {
@@ -29,12 +29,12 @@ namespace architectures {
         }
     };
 
-    // 用来统一各种数据类型的, 但是这样搞, 会引入虚函数多态, 效率对于 forward backward, save_weights 这些影响其实不是很大
-    // backward 没法 const, 因为 relu 是就地操作的, 欸
+    // Used to unify various data types, but doing so will introduce virtual function polymorphism, and the efficiency will not have a big impact on forward backward, save_weights
+    // backward cannot be const, because relu operates in-place.
     class Layer {
     public:
-        const std::string name;  // 这一层的名字
-        std::vector<tensor> output;  // 输出的张量
+        const std::string name;  // The name of this layer
+        std::vector<tensor> output;  // Output tensor
     public:
         Layer(std::string& _name) : name(std::move(_name)) {}
         virtual std::vector<tensor> forward(const std::vector<tensor>& input) = 0;
@@ -46,61 +46,61 @@ namespace architectures {
     };
 
 
-    class Conv2D : public Layer {
+    class Conv2D: public Layer {
     private:
-        // 卷积层的固有信息
-        std::vector<tensor> weights; // 卷积核的权值参数, out_channels X in_channels X kernel_size X kernel_size
-        std::vector<data_type> bias; // 偏置(可以写成 tensor1D)
-        const int in_channels;  // 要滤波的特征图有几个通道
-        const int out_channels; // 这一层卷积有几个卷积核
-        const int kernel_size;  // 卷积核的边长
-        const int stride;       // 卷积的步长
-        const int params_for_one_kernel;   // 一个卷积核的参数个数
-        const int padding = 0;  // padding 填充量, 这个会破坏这个脆弱的程序, 还会牺牲性能, 以后有时间再说吧
-        std::default_random_engine seed;   // 初始化的种子
-         std::vector<int> offset; // 卷积的偏移量, 辅助用的
-        // 历史信息
-        std::vector<tensor> __input; // 求梯度需要, 其实存储的是指针
-        // 缓冲区, 避免每次重新分配
-        std::vector<tensor> delta_output; // 存储回传到上一层的梯度
-        std::vector<tensor> weights_gradients; // 权值的梯度
-        std::vector<data_type> bias_gradients; // bias 的梯度
+        // Intrinsic information of the convolutional layer
+        std::vector<tensor> weights; // weight parameters of the convolution kernel, out_channels X in_channels X kernel_size X kernel_size
+        std::vector<data_type> bias; // bias (can be written as tensor1D)
+        const int in_channels; // The feature map to be filtered has several channels
+        const int out_channels; // This layer of convolution has several convolution kernels
+        const int kernel_size; // side length of the convolution kernel
+        const int stride; // Convolution step size
+        const int params_for_one_kernel; // The number of parameters of a convolution kernel
+        const int padding = 0; // padding padding amount, this will break this fragile program and sacrifice performance. We'll talk about this later when we have time
+        std::default_random_engine seed; // Initialized seed
+        std::vector<int> offset; // Offset of convolution, auxiliary
+        // Historical information
+        std::vector<tensor> __input; // Need to find the gradient, in fact it stores a pointer
+        // Buffer, avoid each reallocation
+        std::vector<tensor> delta_output; // Store the gradient passed back to the previous layer
+        std::vector<tensor> weights_gradients; // Gradient of weights
+        std::vector<data_type> bias_gradients; // gradient of bias
     public:
         Conv2D(std::string _name, const int _in_channels=3, const int _out_channels=16, const int _kernel_size=3, const int _stride=2);
-        // 卷积操作的 forward 过程, batch_num X in_channels X H X W
+        // Forward process of convolution operation, batch_num X in_channels X H X W
         std::vector<tensor> forward(const std::vector<tensor>& input);
-        // 优化的话, 把一些堆上的数据放到栈区, 局部变量快
+        // For optimization, put some data on the heap into the stack area, local variables are fast
         std::vector<tensor> backward(std::vector<tensor>& delta);
-        // 更新梯度
+        // Update gradient
         void update_gradients(const data_type learning_rate=1e-4);
-        // 保存权值
+        // Save the value
         void save_weights(std::ofstream& writer) const;
-        // 加载权值
+        // Load authority value
         void load_weights(std::ifstream& reader);
-        // 获取这一层卷积层的参数值
+        // Get the parameter values of this convolutional layer
         int get_params_num() const;
-    };
+        };
+    
 
-
-    class MaxPool2D : public Layer {
+    class MaxPool2D: public Layer {
     private:
-        // 这一层的固有属性
+        // Intrinsic properties of this layer
         const int kernel_size;
         const int step;
-        const int padding; // 暂时不支持
-        // 缓冲区, 避免每次重新分配的
-        std::vector< std::vector<int> > mask; // 记录哪些位置是有梯度回传的, 第 b 张图, 每张图一个 std::vector<int>
-        std::vector<tensor> delta_output; // 返回的 delta
-        std::vector<int> offset;  // 偏移量指针, 和之前 Conv2D 的一样
+        const int padding; // Not supported yet
+        // Buffer, avoid each reallocation
+        std::vector< std::vector<int> > mask; // Record which locations have gradients passed back, the bth graph, one std::vector<int> per graph
+        std::vector<tensor> delta_output; // returned delta
+        std::vector<int> offset; // offset pointer, the same as the previous Conv2D
     public:
         MaxPool2D(std::string _name, const int _kernel_size=2, const int _step=2)
-                : Layer(_name), kernel_size(_kernel_size), step(_step), padding(0),
-                  offset(_kernel_size * _kernel_size, 0) {}
-        // 前向
+        : Layer(_name), kernel_size(_kernel_size), step(_step), padding(0),
+        offset(_kernel_size * _kernel_size, 0) {}
+        // Forward
         std::vector<tensor> forward(const std::vector<tensor>& input);
-        // 反向传播
+        // Backpropagation
         std::vector<tensor> backward(std::vector<tensor>& delta);
-
+    
     };
 
 
@@ -112,56 +112,56 @@ namespace architectures {
     };
 
 
-    // 线性变换层
-    class LinearLayer : public Layer {
+    // Linear transformation layer
+    class LinearLayer: public Layer {
     private:
-        // 线性层的固有信息
-        const int in_channels;                // 输入的神经元个数
-        const int out_channels;               // 输出的神经元个数
-        std::vector<data_type> weights;       // 权值矩阵(这里其实可以改成 Tensor1D, 数据类型可以统一, 但后面的 weights_gradients 不好搞)
-        std::vector<data_type> bias;          // 偏置
-        // 历史信息
-        std::tuple<int, int, int> delta_shape;// 记下来, delta 的形状, 从 1 X 4096 到 128 * 4 * 4 这种
-        std::vector<tensor> __input;          // 梯度回传的时候需要输入 Wx + b, 需要保留 x
-        // 以下是缓冲区
-        std::vector<tensor> delta_output;     // delta 回传到输入的梯度
-        std::vector<data_type> weights_gradients; // 缓存区, 权值矩阵的梯度
-        std::vector<data_type> bias_gradients;    // bias 的梯度
+        // Intrinsic information of the linear layer
+        const int in_channels; // Number of neurons input
+        const int out_channels; // Number of neurons output
+        std::vector<data_type> weights; // Weight matrix (this can actually be changed to Tensor1D, the data types can be unified, but the weights_gradients at the end are not easy to use)
+        std::vector<data_type> bias; // bias
+        // Historical information
+        std::tuple<int, int, int> delta_shape; // Write down the shape of delta, from 1 X 4096 to 128 * 4 * 4
+        std::vector<tensor> __input; // When passing the gradient back, you need to input Wx + b, and you need to keep x
+        // The following is the buffer
+        std::vector<tensor> delta_output; // delta returns the gradient to the input
+        std::vector<data_type> weights_gradients; // cache area, gradient of the weight matrix
+        std::vector<data_type> bias_gradients; // gradient of bias
     public:
         LinearLayer(std::string _name, const int _in_channels, const int _out_channels);
-        // 做 Wx + b 矩阵运算
+        // Do Wx + b matrix operations
         std::vector<tensor> forward(const std::vector<tensor>& input);
         std::vector<tensor> backward(std::vector<tensor>& delta);
         void update_gradients(const data_type learning_rate=1e-4);
         void save_weights(std::ofstream& writer) const;
         void load_weights(std::ifstream& reader);
-    };
+        };
 
 
-    // 这个 BatchNorm 是不同通道做, 不具体实现还真不知道, 后面有时间填坑
-    // 目前只考虑 Conv 层的 BN
-    class BatchNorm2D : public Layer {
+    // This BatchNorm is made in a different channel. I don't know if it's implemented in detail, but I have time to fill in the gaps later
+    // Currently only consider BN of Conv layer
+    class BatchNorm2D: public Layer {
     private:
-        // 固有信息
+    // Inherent information
         const int out_channels;
         const data_type eps;
         const data_type momentum;
-        // 要学习的参数(这里直接用 vector 就行, 不统一也问题不大)
+        // Parameters to learn (use vector directly here, it's not a problem if it's not uniform)
         std::vector<data_type> gamma;
         std::vector<data_type> beta;
-        // 要保留的历史信息
+        // Historical information to keep
         std::vector<data_type> moving_mean;
         std::vector<data_type> moving_var;
-        // 缓冲区, 避免每次重新分配
-        std::vector<tensor> normed_input;
+        // Buffer, avoid each reallocation
+        std::vector<tensor> normalized_input;
         std::vector<data_type> buffer_mean;
         std::vector<data_type> buffer_var;
-        // 保留的梯度信息
+        // Reserved gradient information
         std::vector<data_type> gamma_gradients;
         std::vector<data_type> beta_gradients;
-        // 临时的梯度信息, 其实也是缓冲区
+        // Temporary gradient information, which is actually also a buffer
         tensor norm_gradients;
-        // 求梯度需要用的
+        // Need to use to find the gradient
         std::vector<tensor> __input;
     public:
         BatchNorm2D(std::string _name, const int _out_channels, const data_type _eps=1e-5, const data_type _momentum=0.1);
@@ -173,16 +173,16 @@ namespace architectures {
     };
 
 
-    // 暂时只支持 Conv 层, 但 dropout 一般放在 linear 线性连接层
-    // 虽然训练可以正常训练, 但是测试有点垃圾
-    class Dropout : public Layer {
+    // Currently only the Conv layer is supported, but dropout is usually placed in the linear linear connection layer
+     // Although the training can be trained normally, the test is a bit rubbish
+    class Dropout: public Layer {
     private:
-        // 固有属性
+    // Inherent properties
         data_type p;
         int selected_num;
         std::vector<int> sequence;
         std::default_random_engine drop;
-        // backward 需要用
+    // backward needs to be used
         std::vector<int> mask;
     public:
         Dropout(std::string _name, const data_type _p=0.5): Layer(_name), p(_p), drop(1314) {}
@@ -192,7 +192,7 @@ namespace architectures {
 
 
 
-    // 胡乱写的一个能跑的 CNN 网络结构, 不是真的 AlexNet
+    // A random CNN network structure that can run, not the real AlexNet
     class AlexNet {
     public:
         bool print_info = false;
@@ -200,17 +200,17 @@ namespace architectures {
         std::list< std::shared_ptr<Layer> > layers_sequence;
     public:
         AlexNet(const int num_classes=3, const bool batch_norm=false);
-        // 前向
+        // Forward
         std::vector<tensor> forward(const std::vector<tensor>& input);
-        // 梯度反传
+        // Gradient retransmission
         void backward(std::vector<tensor>& delta_start);
-        // 梯度更新到权值
+        // Gradient updated to weight
         void update_gradients(const data_type learning_rate=1e-4);
-        // 保存模型
+        // Save the model
         void save_weights(const std::filesystem::path& save_path) const;
-        // 加载模型
+        // Load the model
         void load_weights(const std::filesystem::path& checkpoint_path);
-        // GradCam 可视化
+        // GradCam visualization
         cv::Mat grad_cam(const std::string& layer_name) const;
     };
 }

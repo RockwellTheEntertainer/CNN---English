@@ -13,38 +13,38 @@ public:
 const int C, H, W;
 data_type* data;
 std::string name;
-// 形状 C x H x W, 分配内存
+// Shape C x H x W, allocate memory
 Tensor3D(const int _C, const int _H, const int _W, const std::string _name="pipeline")
 : C(_C), H(_H), W(_W), data(new data_type[_C * _H * _W]), name(std::move(_name)) {}
-// 形状 C x H x W, 分配内存
+// Shape C x H x W, allocate memory
 Tensor3D(const std::tuple<int, int, int>& shape, const std::string _name="pipeline")
 : C(std::get<0>(shape)), H(std::get<1>(shape)), W(std::get<2>(shape)),
 data(new data_type[std::get<0>(shape) * std::get<1>(shape) * std::get<2>(shape)]),
 name(std::move(_name)) {}
-// 形状 length x 1 x 1, 此时length = C, 全连接层用得到
+// Shape length x 1 x 1, at this time length = C, the fully connected layer is used to get
 Tensor3D(const int length, const std::string _name="pipeline")
 : C(length), H(1), W(1), data(new data_type[length]), name(std::move(_name)) {}
-// 从图像指针中读取内容
+// Read content from the image pointer
 void read_from_opencv_mat(const uchar* const img_ptr);
-// 清零
+// Clear
 void set_zero();
-// 找最大值
+// Find the maximum value
 data_type max() const;
 int argmax() const;
-// 找最小值
+// Find Minimum
 data_type min() const;
 int argmin() const;
 void div(const data_type times);
 void normalize(const std::vector<data_type> mean={0.406, 0.456, 0.485}, const std::vector<data_type> std_div={0.225, 0.224, 0.229});
-// 从 tensor 恢复成图像
+// Restore to image from tensor
 cv::Mat opecv_mat(const int CH=3) const;
-// 获取这个 Tensor 的内容长度
+// Get the content length of this Tensor
 int get_length() const;
-// 获取这个 Tensor 的形状
+// Get the shape of this Tensor
 std::tuple<int, int, int> get_shape() const;
-// 打印这个 Tensor 的形状
+// Print the shape of this Tensor
 void print_shape() const;
-// 打印这个 Tensor 在第 _C 个通道的内容
+// Print the contents of this Tensor in channel _C
 void print(const int _C=0) const;
 std::shared_ptr<Tensor3D> rot180() const;
 std::shared_ptr<Tensor3D> pad(const int padding=1) const;

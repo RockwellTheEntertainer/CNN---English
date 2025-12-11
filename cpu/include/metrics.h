@@ -7,16 +7,16 @@
 
 class ClassificationEvaluator {
 private:
-    int correct_num = 0;  // 当前累计的判断正确的样本数目
-    int sample_num = 0;   // 当前累计的样本数目
+int correct_num = 0; // The number of correct samples currently accumulated
+int sample_num = 0; // Current cumulative number of samples
 public:
-    ClassificationEvaluator() = default;
-    // 这一个 batch 猜对了几个
-    void compute(const std::vector<int>& predict, const std::vector<int>& labels);
-    // 查看累计的正确率
-    float get() const;
-    // 重新开始统计
-    void clear();
+ClassificationEvaluator() = default;
+// This batch guessed a few correctly
+void compute(const std::vector<int>& predict, const std::vector<int>& labels);
+// Check the cumulative accuracy
+float get() const;
+// Restart statistics
+void clear();
 };
 
 

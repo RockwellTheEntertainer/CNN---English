@@ -4,17 +4,17 @@
 #include "data_format.h"
 
 
-// 给 batch_size 个向量, 每个向量 softmax 成多类别的概率
+// Give batch_size vectors, each vector softmax the probability of forming multiple categories
 std::vector<tensor> softmax(const std::vector<tensor>& input);
 
-// batch_size 个样本, 每个样本 0, 1, 2 这种, 例如  1 就得到 [0.0, 1.0, 0.0, 0.0]
+// batch_size samples, each sample is 0, 1, 2. For example, 1 gives [0.0, 1.0, 0.0, 0.0]
 std::vector<tensor> one_hot(const std::vector<int>& labels, const int num_classes);
 
-// 给输出概率 probs, 和标签 label 计算交叉熵损失, 返回损失值和回传的梯度
+// Calculate the cross entropy loss for the output probability probs and the label label, return the loss value and the gradient of the return
 std::pair<data_type, std::vector<tensor> > cross_entroy_backward(
-        const std::vector<tensor>& probs, const std::vector<tensor>& labels);
+const std::vector<tensor>& probs, const std::vector<tensor>& labels);
 
-// 小数变成 string
+// Decimals become strings
 std::string float_to_string(const float value, const int precision);
 
 #endif //CNN_FUNC_H
